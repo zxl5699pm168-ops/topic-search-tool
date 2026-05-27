@@ -15,7 +15,7 @@ import tempfile
 app = Flask(__name__)
 
 # ==================== Config ====================
-API_KEY = os.environ.get('YT_API_KEY', 'AIzaSyCzwAFKyLyGSr0jNWbTBVlE95rHe5z70H0')
+API_KEY = os.environ.get('YT_API_KEY', '')
 PROXY_PORT = os.environ.get('YT_PROXY_PORT', '7897')
 PROXY_URL = f'http://127.0.0.1:{PROXY_PORT}'
 # On cloud (Render etc), no proxy needed. Set USE_PROXY=false to disable.
@@ -23,7 +23,7 @@ USE_PROXY = os.environ.get('USE_PROXY', 'true').lower() == 'true'
 APP_PORT = int(os.environ.get('APP_PORT', os.environ.get('PORT', '5102')))
 
 # TikTok API - SocialCrawl
-TIKTOK_API_KEY = os.environ.get('TIKTOK_API_KEY', 'sc_UlUvDc4H9cF06kDtaqzMnEPJGicFM1WprfgJiLAzSlQ')
+TIKTOK_API_KEY = os.environ.get('TIKTOK_API_KEY', '')
 TIKTOK_API_BASE = 'https://www.socialcrawl.dev/v1/tiktok/search'
 
 # TikHub API - 国内4平台 (抖音/小红书/B站/视频号)
@@ -267,8 +267,8 @@ def search_tiktok(keyword, max_results=10):
                 pub_date_formatted = ''
 
             # Hashtags
-            text_extra = aweme.get('text_extra', [])
-            hashtags = [t.get('hashtag_name', '') for t in text_extra if t.get('hashtag_name')]
+            text_extra = aweme.get('text_extra') or []
+            hashtags = [t.get('hashtag_name', '') for t in text_extra if isinstance(t, dict) and t.get('hashtag_name')]
 
             videos.append({
                 'id': video_id,
@@ -315,7 +315,37 @@ def search_tiktok(keyword, max_results=10):
 
 
 # ==================== TikHub API Helpers ====================
-def tikhub_get(path, api_key, params=None):
+class TikHubError(Exception):
+    """Custom exception for TikHub API errors with Chinese message."""
+    pass
+
+
+def _handle_tikhub_http_error(e, path):
+    """Parse TikHub HTTPError and raise TikHubError with Chinese message."""
+    try:
+        body = e.read().decode('utf-8')
+        detail = json.loads(body).get('detail', {})
+        if isinstance(detail, dict):
+            msg_zh = detail.get('message_zh', '')
+            code = detail.get('code', e.code)
+            if code == 402 or e.code == 402:
+                raise TikHubError(f'余额不足：{msg_zh}')
+            elif e.code == 401:
+                raise TikHubError('API Key 无效或已过期')
+            else:
+                raise TikHubError(f'API错误({code}): {msg_zh or e.reason}')
+        elif isinstance(detail, list):
+            # Parameter validation errors
+            msgs = [d.get('msg','') for d in detail if isinstance(d, dict)]
+            raise TikHubError(f'参数错误: {"; ".join(msgs)}')
+    except TikHubError:
+        raise
+    except:
+        pass
+    raise TikHubError(f'HTTP错误: {e.code} {e.reason}')
+
+
+def tikhub_get(path, api_key, params=None, timeout=30):
     """Call TikHub GET endpoint (no proxy needed for api.tikhub.dev)"""
     url = f'{TIKHUB_API_BASE}{path}'
     if params:
@@ -324,23 +354,27 @@ def tikhub_get(path, api_key, params=None):
     req = urllib.request.Request(url)
     req.add_header('Authorization', f'Bearer {api_key}')
     req.add_header('Accept', 'application/json')
+    req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
 
     import ssl
     ctx = ssl.create_default_context()
     opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx))
 
-    with opener.open(req, timeout=30) as resp:
-        result = json.loads(resp.read().decode('utf-8'))
-        # data 字段可能是 JSON 字符串，需二次解析
-        if result.get('data') and isinstance(result['data'], str):
-            try:
-                result['data'] = json.loads(result['data'])
-            except:
-                pass
-        return result
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+            # data 字段可能是 JSON 字符串，需二次解析
+            if result.get('data') and isinstance(result['data'], str):
+                try:
+                    result['data'] = json.loads(result['data'])
+                except:
+                    pass
+            return result
+    except urllib.error.HTTPError as e:
+        _handle_tikhub_http_error(e, path)
 
 
-def tikhub_post(path, api_key, body=None):
+def tikhub_post(path, api_key, body=None, timeout=30):
     """Call TikHub POST endpoint (no proxy needed for api.tikhub.dev)"""
     url = f'{TIKHUB_API_BASE}{path}'
     data = json.dumps(body or {}).encode('utf-8')
@@ -349,27 +383,30 @@ def tikhub_post(path, api_key, body=None):
     req.add_header('Authorization', f'Bearer {api_key}')
     req.add_header('Content-Type', 'application/json')
     req.add_header('Accept', 'application/json')
+    req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
 
     import ssl
     ctx = ssl.create_default_context()
     opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx))
 
-    with opener.open(req, timeout=30) as resp:
-        result = json.loads(resp.read().decode('utf-8'))
-        if result.get('data') and isinstance(result['data'], str):
-            try:
-                result['data'] = json.loads(result['data'])
-            except:
-                pass
-        return result
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+            if result.get('data') and isinstance(result['data'], str):
+                try:
+                    result['data'] = json.loads(result['data'])
+                except:
+                    pass
+            return result
+    except urllib.error.HTTPError as e:
+        _handle_tikhub_http_error(e, path)
 
 
 # ==================== Douyin Search (TikHub) ====================
 def search_douyin(keyword, max_results=10):
     """Search Douyin (抖音) videos via TikHub API."""
     if not TIKHUB_API_KEY:
-        print('TikHub API Key not configured, skip Douyin')
-        return []
+        raise TikHubError('TikHub API Key 未配置，无法搜索抖音')
 
     try:
         result = tikhub_post(
@@ -388,12 +425,17 @@ def search_douyin(keyword, max_results=10):
         )
 
         data = result.get('data', {})
-        items = data.get('data', []) if isinstance(data, dict) else []
+        # TikHub Douyin returns items in data.aweme_list or data.data
+        # aweme_list may be None (key exists but value is null), fallback to data.data
+        items = []
+        if isinstance(data, dict):
+            items = data.get('aweme_list') or data.get('data') or []
 
         videos = []
         for item in items[:max_results]:
-            aweme = item.get('aweme_info', {})
-            if not aweme:
+            # Items may have aweme_info wrapper or be aweme_info directly
+            aweme = item.get('aweme_info', item) if isinstance(item, dict) else {}
+            if not isinstance(aweme, dict) or not aweme:
                 continue
 
             author = aweme.get('author', {})
@@ -411,8 +453,8 @@ def search_douyin(keyword, max_results=10):
                 pub_date_str = ''
                 pub_date_formatted = ''
 
-            text_extra = aweme.get('text_extra', [])
-            hashtags = [t.get('hashtag_name', '') for t in text_extra if t.get('hashtag_name')]
+            text_extra = aweme.get('text_extra') or []
+            hashtags = [t.get('hashtag_name', '') for t in text_extra if isinstance(t, dict) and t.get('hashtag_name')]
 
             videos.append({
                 'id': aweme.get('aweme_id', ''),
@@ -445,116 +487,134 @@ def search_douyin(keyword, max_results=10):
 
         return videos
 
+    except TikHubError:
+        raise
     except urllib.error.HTTPError as e:
-        print(f'Douyin search HTTP error: {e.code} {e.reason}')
-        return []
+        raise TikHubError(f'抖音搜索HTTP错误: {e.code} {e.reason}')
     except Exception as e:
-        print(f'Douyin search error: {e}')
-        return []
+        import traceback
+        traceback.print_exc()
+        raise TikHubError(f'抖音搜索失败: {e}')
 
 
-# ==================== Xiaohongshu Search (TikHub) ====================
+# ==================== Xiaohongshu Search (TikHub - App V2) ====================
 def search_xiaohongshu(keyword, max_results=10):
-    """Search Xiaohongshu (小红书) notes via TikHub API."""
+    """Search Xiaohongshu (小红书) notes via TikHub App V2 API."""
     if not TIKHUB_API_KEY:
-        print('TikHub API Key not configured, skip Xiaohongshu')
-        return []
+        raise TikHubError('TikHub API Key 未配置，无法搜索小红书')
 
     try:
         result = tikhub_get(
-            '/api/v1/xiaohongshu/web/search_notes',
+            '/api/v1/xiaohongshu/app_v2/search_notes',
             TIKHUB_API_KEY,
             params={
                 'keyword': keyword,
                 'page': 1,
-                'sort': 'general',
-                'noteType': '_0',
+                'sort_type': 'general',
+                'note_type': '不限',
+                'time_filter': '不限',
             }
         )
 
         data = result.get('data', {})
-        items = data.get('items', []) if isinstance(data, dict) else []
+        # App V2 returns items in data.data.items, each item has 'note' key
+        inner_data = data.get('data', {}) if isinstance(data, dict) else {}
+        items = inner_data.get('items', []) if isinstance(inner_data, dict) else []
 
         videos = []
         for item in items[:max_results]:
-            note = item.get('note_card', item) if isinstance(item, dict) else {}
+            note = item.get('note', item) if isinstance(item, dict) else {}
             if not isinstance(note, dict):
                 continue
 
             user = note.get('user', {})
-            interact = note.get('interact_info', {})
-            cover = note.get('cover', {})
-
-            # Thumbnail
-            thumb_url = ''
-            if isinstance(cover, dict):
-                url_list = cover.get('url_list', cover.get('url', ''))
-                if isinstance(url_list, list) and url_list:
-                    thumb_url = url_list[-1]
-                elif isinstance(url_list, str):
-                    thumb_url = url_list
-
-            # Tags
-            tag_list = note.get('tag_list', [])
-            tags = [t.get('name', '') for t in tag_list if isinstance(t, dict) and t.get('name')]
-
             # Note type
-            note_type = note.get('type', note.get('note_type', ''))
-            type_label = '视频' if str(note_type) in ('2', 'video') else '图文'
+            note_type = note.get('type', '')
+            type_label = '视频' if note_type == 'video' else '图文'
 
-            # Duration
-            video_info = note.get('video', {})
+            # Thumbnail from images_list
+            thumb_url = ''
+            images = note.get('images_list', [])
+            if images and isinstance(images, list):
+                first_img = images[0]
+                if isinstance(first_img, dict):
+                    thumb_url = first_img.get('url', first_img.get('url_size_large', ''))
+
+            # Tags - tag_info is a dict {title, type}
+            tag_info = note.get('tag_info', {})
+            tags = []
+            if isinstance(tag_info, dict) and tag_info.get('title'):
+                tags = [tag_info['title']]
+
+            # Duration - video_duration is in seconds
+            duration_val = note.get('video_duration', 0)
             duration_str = ''
-            if isinstance(video_info, dict):
-                duration_val = video_info.get('duration', 0)
-                if duration_val:
-                    duration_str = str(round(float(duration_val)))
+            if duration_val:
+                try:
+                    duration_str = str(int(float(duration_val)))
+                except:
+                    duration_str = str(duration_val)
+
+            # Timestamp
+            ts = note.get('timestamp', 0)
+            if ts:
+                try:
+                    pub_date = datetime.utcfromtimestamp(int(ts))
+                    pub_date_str = pub_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+                    pub_date_formatted = pub_date.strftime('%Y-%m-%d')
+                except:
+                    pub_date_str = str(ts)
+                    pub_date_formatted = str(ts)
+            else:
+                pub_date_str = ''
+                pub_date_formatted = ''
+
+            note_id = note.get('id', '')
 
             videos.append({
-                'id': note.get('note_id', note.get('id', '')),
+                'id': note_id,
                 'platform': 'xiaohongshu',
-                'title': (note.get('title', note.get('display_title', '')) or '')[:200],
+                'title': (note.get('title', '') or '')[:200],
                 'channelTitle': user.get('nickname', ''),
-                'channelId': user.get('user_id', user.get('userid', '')),
-                'channelAvatar': '',
+                'channelId': user.get('userid', user.get('user_id', '')),
+                'channelAvatar': user.get('images', ''),
                 'subscriberCount': 'N/A',
                 'channelVideoCount': 'N/A',
                 'channelTotalViews': 'N/A',
-                'publishedAt': note.get('time', ''),
-                'publishedAtFormatted': note.get('time', ''),
+                'publishedAt': pub_date_str,
+                'publishedAtFormatted': pub_date_formatted,
                 'viewCount': '0',
                 'viewCountFormatted': 'N/A',
-                'likeCount': interact.get('liked_count', '0'),
-                'likeCountFormatted': interact.get('liked_count', '0'),
-                'commentCount': interact.get('comment_count', '0'),
-                'commentCountFormatted': interact.get('comment_count', '0'),
-                'shareCount': interact.get('share_count', '0'),
-                'shareCountFormatted': interact.get('share_count', '0'),
-                'collectCount': interact.get('collected_count', '0'),
+                'likeCount': str(note.get('liked_count', 0)),
+                'likeCountFormatted': format_number(str(note.get('liked_count', 0))),
+                'commentCount': str(note.get('comments_count', 0)),
+                'commentCountFormatted': format_number(str(note.get('comments_count', 0))),
+                'shareCount': str(note.get('shared_count', 0)),
+                'shareCountFormatted': format_number(str(note.get('shared_count', 0))),
+                'collectCount': str(note.get('collected_count', 0)),
                 'duration': duration_str,
                 'durationFormatted': parse_duration(duration_str) if duration_str else type_label,
                 'description': note.get('desc', ''),
                 'thumbnail': thumb_url,
                 'tags': tags[:10],
-                'url': f"https://www.xiaohongshu.com/explore/{note.get('note_id', '')}",
+                'url': f'https://www.xiaohongshu.com/explore/{note_id}',
             })
 
         return videos
 
+    except TikHubError:
+        raise
     except urllib.error.HTTPError as e:
-        print(f'Xiaohongshu search HTTP error: {e.code} {e.reason}')
-        return []
+        raise TikHubError(f'小红书搜索HTTP错误: {e.code} {e.reason}')
     except Exception as e:
-        print(f'Xiaohongshu search error: {e}')
-        return []
+        raise TikHubError(f'小红书搜索失败: {e}')
 
 
 # ==================== Bilibili Search (TikHub) ====================
 def search_bilibili(keyword, max_results=10):
     """Search Bilibili (B站) videos via TikHub API."""
     if not TIKHUB_API_KEY:
-        print('TikHub API Key not configured, skip Bilibili')
-        return []
+        raise TikHubError('TikHub API Key 未配置，无法搜索B站')
 
     try:
         result = tikhub_get(
@@ -562,23 +622,28 @@ def search_bilibili(keyword, max_results=10):
             TIKHUB_API_KEY,
             params={
                 'keyword': keyword,
-                'order': 'totalrank',
+                'order': '0',
                 'page': 1,
                 'page_size': max_results,
             }
         )
 
         data = result.get('data', {})
-        # B站搜索结果可能在 data.result 中
+        # B站搜索结果在 data.data.result 中 (TikHub外层data > B站原始data > 搜索结果)
         items = []
         if isinstance(data, dict):
-            result_data = data.get('result', [])
-            if isinstance(result_data, list):
-                items = result_data
-            elif isinstance(result_data, dict):
-                items = result_data.get('result', result_data.get('video', []))
-                if not isinstance(items, list):
-                    items = []
+            # Navigate through nested data structure
+            inner_data = data.get('data', data)
+            if isinstance(inner_data, dict):
+                result_list = inner_data.get('result', [])
+                if isinstance(result_list, list):
+                    items = result_list
+                elif isinstance(result_list, dict):
+                    items = result_list.get('result', result_list.get('video', []))
+                    if not isinstance(items, list):
+                        items = []
+            elif isinstance(data.get('result'), list):
+                items = data['result']
 
         videos = []
         for item in items[:max_results]:
@@ -647,95 +712,136 @@ def search_bilibili(keyword, max_results=10):
 
         return videos
 
+    except TikHubError:
+        raise
     except urllib.error.HTTPError as e:
-        print(f'Bilibili search HTTP error: {e.code} {e.reason}')
-        return []
+        raise TikHubError(f'B站搜索HTTP错误: {e.code} {e.reason}')
     except Exception as e:
-        print(f'Bilibili search error: {e}')
-        return []
+        raise TikHubError(f'B站搜索失败: {e}')
 
 
 # ==================== WeChat Channels Search (TikHub) ====================
 def search_wechat_channels(keyword, max_results=10):
-    """Search WeChat Channels (视频号) via TikHub API."""
+    """Search WeChat Channels (视频号) via TikHub API.
+    
+    Uses fetch_search_ordinary (综合搜索) endpoint which returns items
+    in a flat structure: title, source, dateTime, duration, image, likeNum, etc.
+    Fallback: fetch_search_latest (最新视频) if ordinary returns empty.
+    """
     if not TIKHUB_API_KEY:
-        print('TikHub API Key not configured, skip WeChat Channels')
-        return []
+        raise TikHubError('TikHub API Key 未配置，无法搜索视频号')
 
-    try:
-        result = tikhub_get(
-            '/api/v1/wechat_channels/fetch_search_channels',
-            TIKHUB_API_KEY,
-            params={
-                'keyword': keyword,
-                'offset': 0,
-                'sort_type': '_0',
-            }
-        )
+    # Try fetch_search_ordinary first
+    result = tikhub_get(
+        '/api/v1/wechat_channels/fetch_search_ordinary',
+        TIKHUB_API_KEY,
+        params={
+            'keywords': keyword,
+        },
+        timeout=60,
+    )
 
-        data = result.get('data', {})
-        items = data.get('object_list', []) if isinstance(data, dict) else []
+    data = result.get('data', {})
+    items = data.get('items', []) if isinstance(data, dict) else []
 
-        videos = []
-        for item in items[:max_results]:
-            if not isinstance(item, dict):
-                continue
+    # Fallback to fetch_search_latest if empty
+    if not items:
+        try:
+            result2 = tikhub_get(
+                '/api/v1/wechat_channels/fetch_search_latest',
+                TIKHUB_API_KEY,
+                params={
+                    'keywords': keyword,
+                },
+                timeout=60,
+            )
+            data2 = result2.get('data', {})
+            items2 = data2.get('items', []) if isinstance(data2, dict) else []
+            if items2:
+                items = items2
+        except Exception:
+            pass
 
-            object_desc = item.get('object_desc', {})
-            finder_user = item.get('finder_user', {})
-            social_info = item.get('social_info', {})
-            media = object_desc.get('media', [])
+    videos = []
+    for item in items[:max_results]:
+        if not isinstance(item, dict):
+            continue
 
-            # Thumbnail
-            thumb_url = ''
-            if media and isinstance(media, list):
-                thumb_url = media[0].get('cover_url', media[0].get('url', ''))
+        source = item.get('source', {})
+        jump_info = item.get('jumpInfo', {})
 
-            # Duration
-            duration_val = object_desc.get('duration', 0)
-            duration_sec = 0
+        # Extract author from source
+        channel_name = ''
+        channel_avatar = ''
+        if isinstance(source, dict):
+            channel_name = source.get('title', '')
+            channel_avatar = source.get('iconUrl', '')
+
+        # Duration (format: "01:05" or "00:52")
+        duration_str = item.get('duration', '')
+        duration_sec = 0
+        if duration_str and ':' in str(duration_str):
+            parts = str(duration_str).split(':')
             try:
-                duration_sec = int(float(duration_val))
+                if len(parts) == 2:
+                    duration_sec = int(parts[0]) * 60 + int(parts[1])
+                elif len(parts) == 3:
+                    duration_sec = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
             except:
                 pass
 
-            videos.append({
-                'id': object_desc.get('object_id', ''),
-                'platform': 'wechat',
-                'title': (object_desc.get('description', '') or '')[:200],
-                'channelTitle': finder_user.get('nickname', ''),
-                'channelId': finder_user.get('username', ''),
-                'channelAvatar': finder_user.get('head_url', ''),
-                'subscriberCount': 'N/A',
-                'channelVideoCount': 'N/A',
-                'channelTotalViews': 'N/A',
-                'publishedAt': str(object_desc.get('create_time', '')),
-                'publishedAtFormatted': str(object_desc.get('create_time', '')),
-                'viewCount': str(social_info.get('play_count', social_info.get('read_count', 0))),
-                'viewCountFormatted': format_number(str(social_info.get('play_count', social_info.get('read_count', 0)))),
-                'likeCount': str(social_info.get('like_count', social_info.get('liked_count', 0))),
-                'likeCountFormatted': format_number(str(social_info.get('like_count', social_info.get('liked_count', 0)))),
-                'commentCount': str(social_info.get('comment_count', 0)),
-                'commentCountFormatted': format_number(str(social_info.get('comment_count', 0))),
-                'shareCount': str(social_info.get('share_count', 0)),
-                'shareCountFormatted': format_number(str(social_info.get('share_count', 0))),
-                'collectCount': '0',
-                'duration': str(duration_sec),
-                'durationFormatted': f'{duration_sec}s' if duration_sec else 'N/A',
-                'description': object_desc.get('description', ''),
-                'thumbnail': thumb_url,
-                'tags': [],
-                'url': '',
-            })
+        # Like count
+        like_num = item.get('likeNum', 0)
+        try:
+            like_num = int(like_num) if like_num else 0
+        except:
+            like_num = 0
 
-        return videos
+        # Build video URL from exportId
+        export_id = item.get('exportId', '')
+        video_url = ''
+        if export_id:
+            video_url = f'weixin://channels/home/{export_id}'
 
-    except urllib.error.HTTPError as e:
-        print(f'WeChat Channels search HTTP error: {e.code} {e.reason}')
-        return []
-    except Exception as e:
-        print(f'WeChat Channels search error: {e}')
-        return []
+        # Hash doc ID as video ID
+        video_id = item.get('hashDocID', item.get('docID', ''))
+
+        # Date time
+        date_time = item.get('dateTime', '')
+
+        videos.append({
+            'id': video_id,
+            'platform': 'wechat',
+            'title': (item.get('title', '') or '')[:200],
+            'channelTitle': channel_name,
+            'channelId': '',
+            'channelAvatar': channel_avatar,
+            'subscriberCount': 'N/A',
+            'channelVideoCount': 'N/A',
+            'channelTotalViews': 'N/A',
+            'publishedAt': date_time,
+            'publishedAtFormatted': date_time,
+            'viewCount': '0',
+            'viewCountFormatted': 'N/A',
+            'likeCount': str(like_num),
+            'likeCountFormatted': format_number(str(like_num)),
+            'commentCount': '0',
+            'commentCountFormatted': 'N/A',
+            'shareCount': '0',
+            'shareCountFormatted': 'N/A',
+            'collectCount': '0',
+            'duration': str(duration_sec),
+            'durationFormatted': duration_str if duration_str else 'N/A',
+            'description': item.get('title', ''),
+            'thumbnail': item.get('image', ''),
+            'tags': [],
+            'url': video_url,
+        })
+
+    if not videos:
+        raise TikHubError('视频号搜索暂无结果，该接口数据有限，建议换个关键词重试')
+
+    return videos
 
 
 # ==================== Routes ====================
@@ -764,7 +870,7 @@ def search():
     order = request.args.get('order', 'relevance')
     region = request.args.get('region', '')
     tikhub_key = request.args.get('tikhub_key', '').strip()
-    platforms = request.args.get('platforms', 'youtube,tiktok').split(',')
+    platforms = request.args.get('platforms', 'douyin,xiaohongshu,bilibili,wechat').split(',')
 
     if not keyword:
         return jsonify({'error': '请输入搜索关键词'}), 400
@@ -936,7 +1042,7 @@ def analyze_topics():
 
         prompt = f"""你是一位资深的内容营销专家和跨境电商自媒体顾问。
 
-请基于以下从 YouTube、TikTok、抖音、小红书、B站、视频号 搜索到的关于"{keyword}"的视频数据，进行深度分析，生成一份结构化选题库。
+请基于以下从抖音、小红书、B站、视频号 搜索到的关于"{keyword}"的视频/笔记数据，进行深度分析，生成一份结构化选题库。
 
 ## 分析要求
 1. **话题聚类**：将视频按主题聚类，识别出 3-8 个核心热门话题
@@ -944,7 +1050,7 @@ def analyze_topics():
 3. **仿写建议**：每个话题给出 3-5 个可以直接使用的仿写标题建议
 4. **内容框架**：每个话题给出内容创作的框架建议（开头怎么抓眼球、中间怎么展开、结尾怎么引导）
 5. **热度评级**：基于播放量数据，给出高/中/低的热度评级
-6. **最优平台**：分析该话题在哪个平台（YouTube/TikTok）表现更好
+6. **最优平台**：分析该话题在哪个平台（抖音/小红书/B站/视频号）表现更好
 
 ## 视频数据
 {chr(10).join(video_summaries)}
@@ -958,7 +1064,7 @@ def analyze_topics():
       "topic_name": "话题名称",
       "summary": "话题梗概：为什么这个话题火，核心内容是什么",
       "heat_level": "高|中|低",
-      "best_platform": "YouTube|TikTok|抖音|小红书|B站|视频号|多平台",
+      "best_platform": "抖音|小红书|B站|视频号|多平台",
       "rewrite_titles": ["仿写标题1", "仿写标题2", "仿写标题3", "仿写标题4", "仿写标题5"],
       "content_framework": {{
         "hook": "开头怎么吸引注意力（30字以内）",
@@ -967,7 +1073,7 @@ def analyze_topics():
       }},
       "key_insights": ["洞察1", "洞察2", "洞察3"],
       "example_videos": [
-        {{"title": "示例视频标题", "platform": "YouTube|TikTok", "url": "视频链接", "views": "播放量"}}
+        {{"title": "示例视频标题", "platform": "抖音|小红书|B站|视频号", "url": "视频链接", "views": "播放量"}}
       ]
     }}
   ]
@@ -1158,10 +1264,7 @@ def export_topics_excel():
 
 # ==================== Main ====================
 if __name__ == '__main__':
-    print(f"🚀 多平台选题搜索工具启动 (YouTube/TikTok/抖音/小红书/B站/视频号)")
-    print(f"📡 代理端口: {PROXY_PORT}")
-    print(f"🔑 YouTube API Key: {API_KEY[:10]}...")
-    print(f"🔑 TikTok API Key: {TIKTOK_API_KEY[:10]}...")
+    print(f"🚀 国内多平台选题搜索工具启动 (抖音/小红书/B站/视频号)")
     print(f"🔑 TikHub API Key: {'已配置' if TIKHUB_API_KEY else '未配置(国内平台不可用)'}")
     print(f"🌐 访问地址: http://localhost:{APP_PORT}")
     app.run(host='0.0.0.0', port=APP_PORT, debug=False)

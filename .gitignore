@@ -6,3 +6,4 @@ __pycache__/
 dist/
 test_*.py
 tiktok_search_raw.json
+.DS_Store

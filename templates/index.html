@@ -19,8 +19,6 @@
             --border: #dadce0;
             --shadow: 0 1px 3px rgba(60,64,67,0.12), 0 1px 2px rgba(60,64,67,0.08);
             --shadow-lg: 0 4px 12px rgba(60,64,67,0.15), 0 2px 6px rgba(60,64,67,0.1);
-            --youtube: #ff0000;
-            --tiktok: #000000;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -48,7 +46,7 @@
             flex-wrap: wrap;
         }
         .logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-        .logo-icon { width: 36px; height: 36px; background: #ff0000; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; }
+        .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #fe2c55, #00a1d6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; }
         .logo-text { font-size: 18px; font-weight: 600; color: var(--text); }
         .logo-sub { font-size: 12px; color: var(--text-secondary); }
         .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
@@ -103,8 +101,6 @@
             font-weight: 600;
         }
         .platform-chip .dot { width: 8px; height: 8px; border-radius: 50%; }
-        .dot-yt { background: var(--youtube); }
-        .dot-tt { background: var(--tiktok); }
 
         /* Options */
         .options-bar {
@@ -175,8 +171,6 @@
             display: inline-flex; align-items: center; gap: 4px;
             padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
         }
-        .badge-yt { background: #ffe6e6; color: #cc0000; }
-        .badge-tt { background: #e8e8e8; color: #333; }
         .badge-dy { background: #ffe6ec; color: #fe2c55; }
         .badge-xhs { background: #ffe6ea; color: #ff2442; }
         .badge-bili { background: #e6f7fc; color: #00a1d6; }
@@ -263,7 +257,18 @@
         }
         .error-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-        /* LLM Config Modal */
+        /* Toast success */
+        .toast-success {
+            position: fixed; top: 80px; left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--success); color: white;
+            padding: 12px 24px; border-radius: 8px; font-size: 14px;
+            box-shadow: var(--shadow-lg); opacity: 0; transition: all 0.3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .toast-success.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Settings Modal */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center;
@@ -304,16 +309,16 @@
 <div class="header">
     <div class="header-inner">
         <div class="logo">
-            <div class="logo-icon">▶</div>
+            <div class="logo-icon">🔥</div>
             <div>
                 <div class="logo-text">内容营销选题工具</div>
-                <div class="logo-sub">热点搜集 · AI分析 · 选题生成</div>
+                <div class="logo-sub">国内热点搜集 · AI分析 · 选题生成</div>
             </div>
         </div>
         <div class="search-box">
             <div class="search-input-wrap">
                 <span class="search-icon">🔍</span>
-                <input type="text" class="search-input" id="searchInput" placeholder="输入关键词搜索热点视频..." autocomplete="off">
+                <input type="text" class="search-input" id="searchInput" placeholder="输入关键词搜索热点内容..." autocomplete="off">
             </div>
             <button class="btn btn-primary" id="searchBtn" onclick="doSearch()">搜索</button>
         </div>
@@ -326,14 +331,6 @@
 </div>
 
 <div class="platform-bar">
-    <span class="platform-label">🌍 国外平台：</span>
-    <span class="platform-chip" data-platform="youtube" onclick="togglePlatform(this)">
-        <span class="dot" style="background:#ff0000;"></span> YouTube
-    </span>
-    <span class="platform-chip" data-platform="tiktok" onclick="togglePlatform(this)">
-        <span class="dot" style="background:#000;"></span> TikTok
-    </span>
-    <span style="margin:0 8px;color:#dadce0;">|</span>
     <span class="platform-label">🇨🇳 国内平台：</span>
     <span class="platform-chip" data-platform="douyin" onclick="togglePlatform(this)">
         <span class="dot" style="background:#fe2c55;"></span> 抖音
@@ -348,7 +345,7 @@
         <span class="dot" style="background:#07c160;"></span> 视频号
     </span>
     <span style="margin:0 8px;color:#dadce0;">|</span>
-    <span class="platform-chip active" data-platform="youtube,tiktok,douyin,xiaohongshu,bilibili,wechat" onclick="togglePlatform(this)">
+    <span class="platform-chip active" data-platform="douyin,xiaohongshu,bilibili,wechat" onclick="togglePlatform(this)">
         ⚡ 全平台
     </span>
 </div>
@@ -360,7 +357,6 @@
             <option value="relevance">相关性</option>
             <option value="date">最新发布</option>
             <option value="viewCount">播放量</option>
-            <option value="rating">评分</option>
         </select>
     </div>
     <div class="option-group">
@@ -372,28 +368,17 @@
             <option value="50">50条</option>
         </select>
     </div>
-    <div class="option-group">
-        <label>地区</label>
-        <select id="regionSelect">
-            <option value="">全部</option>
-            <option value="TW">中国台湾</option>
-            <option value="HK">中国香港</option>
-            <option value="US">美国</option>
-            <option value="SG">新加坡</option>
-            <option value="MY">马来西亚</option>
-        </select>
-    </div>
 </div>
 
 <div class="quick-keywords" id="quickKeywords">
     <span class="quick-kw" onclick="quickSearch('跨境电商')">跨境电商</span>
-    <span class="quick-kw" onclick="quickSearch('Amazon选品')">Amazon选品</span>
-    <span class="quick-kw" onclick="quickSearch('TikTok运营')">TikTok运营</span>
-    <span class="quick-kw" onclick="quickSearch('Shopify建站')">Shopify建站</span>
-    <span class="quick-kw" onclick="quickSearch('独立站引流')">独立站引流</span>
-    <span class="quick-kw" onclick="quickSearch('跨境物流')">跨境物流</span>
-    <span class="quick-kw" onclick="quickSearch('海外社媒营销')">海外社媒营销</span>
-    <span class="quick-kw" onclick="quickSearch('dropshipping')">dropshipping</span>
+    <span class="quick-kw" onclick="quickSearch('抖音带货')">抖音带货</span>
+    <span class="quick-kw" onclick="quickSearch('小红书运营')">小红书运营</span>
+    <span class="quick-kw" onclick="quickSearch('短视频创业')">短视频创业</span>
+    <span class="quick-kw" onclick="quickSearch('直播带货技巧')">直播带货技巧</span>
+    <span class="quick-kw" onclick="quickSearch('自媒体变现')">自媒体变现</span>
+    <span class="quick-kw" onclick="quickSearch('个人IP打造')">个人IP打造</span>
+    <span class="quick-kw" onclick="quickSearch('B站UP主')">B站UP主</span>
 </div>
 
 <div class="tabs-wrap">
@@ -405,9 +390,9 @@
 
 <div class="container">
     <div id="emptyState" class="empty">
-        <div class="empty-icon">🎬</div>
-        <div>输入关键词开始搜索热点视频</div>
-        <div style="font-size:13px;margin-top:8px;">支持 YouTube / TikTok / 抖音 / 小红书 / B站 / 视频号 六平台数据采集</div>
+        <div class="empty-icon">🔥</div>
+        <div>输入关键词开始搜索国内热点内容</div>
+        <div style="font-size:13px;margin-top:8px;">支持 抖音 / 小红书 / B站 / 视频号 四平台数据采集</div>
     </div>
 
     <div id="loadingState" class="loading">
@@ -432,11 +417,11 @@
             <table>
                 <thead>
                     <tr>
-                            <th style="width:36px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                        <th style="width:36px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                         <th style="width:80px;">平台</th>
                         <th style="width:160px;">封面</th>
                         <th style="min-width:220px;">标题</th>
-                        <th style="min-width:140px;">频道</th>
+                        <th style="min-width:140px;">作者</th>
                         <th>播放量</th>
                         <th>点赞</th>
                         <th>评论</th>
@@ -486,19 +471,7 @@
         <div class="modal-section-title">🔑 API 密钥</div>
 
         <div class="modal-field">
-            <label class="modal-label">YouTube API Key <span class="key-status key-ok" id="ytKeyStatus">服务端已配置</span></label>
-            <input type="text" class="modal-input" id="ytApiKey" placeholder="AIzaSy..." disabled>
-            <div class="modal-hint">YouTube Data API v3 · 已在服务端配置 · <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google 控制台</a></div>
-        </div>
-
-        <div class="modal-field">
-            <label class="modal-label">TikTok API Key (SocialCrawl) <span class="key-status key-ok" id="ttKeyStatus">服务端已配置</span></label>
-            <input type="text" class="modal-input" id="ttApiKey" placeholder="sc_..." disabled>
-            <div class="modal-hint">SocialCrawl API · 已在服务端配置 · <a href="https://www.socialcrawl.dev" target="_blank">注册获取</a></div>
-        </div>
-
-        <div class="modal-field">
-            <label class="modal-label">TikHub API Key（国内4平台）<span class="key-status" id="tikhubKeyStatus">未配置</span></label>
+            <label class="modal-label">TikHub API Key（国内4平台）<span class="key-status key-no" id="tikhubKeyStatus">未配置</span></label>
             <input type="text" class="modal-input" id="tikhubKey" placeholder="TikHub Bearer Token...">
             <div class="modal-hint">抖音 / 小红书 / B站 / 视频号 需要 · <a href="https://tikhub.io" target="_blank">注册获取</a> · 国内用 api.tikhub.dev 免翻墙</div>
         </div>
@@ -520,10 +493,16 @@
             <label class="modal-label">API 地址</label>
             <input type="text" class="modal-input" id="llmBaseUrl" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1">
             <div class="modal-hint">支持 OpenAI、DeepSeek、Qwen 等兼容 OpenAI 格式的 API</div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+                <span class="quick-kw" onclick="setLLMPreset('deepseek')" style="font-size:11px;padding:3px 10px;">DeepSeek</span>
+                <span class="quick-kw" onclick="setLLMPreset('qwen')" style="font-size:11px;padding:3px 10px;">通义千问</span>
+                <span class="quick-kw" onclick="setLLMPreset('openai')" style="font-size:11px;padding:3px 10px;">OpenAI</span>
+            </div>
         </div>
 
         <div class="modal-actions">
             <button class="btn btn-outline" onclick="closeSettings()">取消</button>
+            <button class="btn btn-warning" id="saveAnalyzeBtn" onclick="saveAndAnalyze()" style="display:none;">🤖 保存并生成选题库</button>
             <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
         </div>
     </div>
@@ -535,7 +514,7 @@
 let currentVideos = [];
 let currentTopics = [];
 let currentKeyword = '';
-let selectedPlatforms = 'youtube,tiktok,douyin,xiaohongshu,bilibili,wechat';
+let selectedPlatforms = 'douyin,xiaohongshu,bilibili,wechat';
 let sortField = '';
 let sortAsc = true;
 let llmConfig = JSON.parse(localStorage.getItem('llmConfig') || '{}');
@@ -561,6 +540,8 @@ function openSettings() {
     const savedTikhubKey = localStorage.getItem('tikhubKey') || '';
     document.getElementById('tikhubKey').value = savedTikhubKey;
     updateKeyStatus();
+    // Show "save and analyze" button if we're in pending analyze mode
+    document.getElementById('saveAnalyzeBtn').style.display = pendingAnalyze ? 'inline-flex' : 'none';
     document.getElementById('llmModal').classList.add('show');
 }
 
@@ -574,14 +555,22 @@ function saveSettings() {
     const baseUrl = document.getElementById('llmBaseUrl').value.trim() || 'https://api.openai.com/v1';
     const tikhubKey = document.getElementById('tikhubKey').value.trim();
 
-    const llmConfig = { apiKey, model, baseUrl };
+    llmConfig = { apiKey, model, baseUrl };
     localStorage.setItem('llmConfig', JSON.stringify(llmConfig));
     if (tikhubKey) localStorage.setItem('tikhubKey', tikhubKey);
     else localStorage.removeItem('tikhubKey');
 
     updateSettingsDot();
     closeSettings();
-    showError('✅ 设置已保存');
+    showToast('✅ 设置已保存');
+
+    // If user clicked "AI 生成选题库" which opened settings, auto-analyze after saving
+    if (pendingAnalyze) {
+        pendingAnalyze = false;
+        if (apiKey) {
+            analyzeTopics();
+        }
+    }
 }
 
 function updateKeyStatus() {
@@ -621,7 +610,6 @@ async function doSearch() {
     currentKeyword = keyword;
     const order = document.getElementById('orderSelect').value;
     const maxResults = document.getElementById('maxSelect').value;
-    const region = document.getElementById('regionSelect').value;
 
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('emptyState').style.display = 'none';
@@ -631,16 +619,16 @@ async function doSearch() {
     document.getElementById('loadingState').classList.add('show');
 
     const platformLabels = {
-        'youtube': 'YouTube', 'tiktok': 'TikTok', 'douyin': '抖音',
-        'xiaohongshu': '小红书', 'bilibili': 'B站', 'wechat': '视频号',
-        'youtube,tiktok': 'YouTube + TikTok',
-        'youtube,tiktok,douyin,xiaohongshu,bilibili,wechat': '全平台'
+        'douyin': '抖音',
+        'xiaohongshu': '小红书',
+        'bilibili': 'B站',
+        'wechat': '视频号',
+        'douyin,xiaohongshu,bilibili,wechat': '全平台'
     };
     document.getElementById('loadingText').textContent = `正在搜索 ${platformLabels[selectedPlatforms] || selectedPlatforms}...`;
 
     try {
         const params = new URLSearchParams({ q: keyword, max: maxResults, order, platforms: selectedPlatforms });
-        if (region) params.set('region', region);
         // Pass TikHub key if configured
         const tikhubKey = localStorage.getItem('tikhubKey') || '';
         if (tikhubKey) params.set('tikhub_key', tikhubKey);
@@ -657,8 +645,8 @@ async function doSearch() {
         currentTopics = []; // Reset topics on new search
 
         // Platform breakdown
-        const platformNames = {youtube:'YouTube',tiktok:'TikTok',douyin:'抖音',xiaohongshu:'小红书',bilibili:'B站',wechat:'视频号'};
-        const platformColors = {youtube:'#cc0000',tiktok:'#333',douyin:'#fe2c55',xiaohongshu:'#ff2442',bilibili:'#00a1d6',wechat:'#07c160'};
+        const platformNames = {douyin:'抖音',xiaohongshu:'小红书',bilibili:'B站',wechat:'视频号'};
+        const platformColors = {douyin:'#fe2c55',xiaohongshu:'#ff2442',bilibili:'#00a1d6',wechat:'#07c160'};
         let breakdown = '';
         const platformCounts = {};
         currentVideos.forEach(v => { platformCounts[v.platform] = (platformCounts[v.platform] || 0) + 1; });
@@ -667,8 +655,8 @@ async function doSearch() {
             breakdown += `<span style="color:${platformColors[p] || '#333'};">${platformNames[p] || p} ${c}</span>`;
         });
         if (data.errors) {
-            Object.keys(data.errors).forEach(p => {
-                breakdown += ` <span style="color:#d93025;">(${platformNames[p] || p} 获取失败)</span>`;
+            Object.entries(data.errors).forEach(([p, msg]) => {
+                breakdown += ` <span style="color:#d93025;" title="${msg}">(${platformNames[p] || p} ❌)</span>`;
             });
         }
         document.getElementById('platformBreakdown').innerHTML = breakdown;
@@ -680,11 +668,13 @@ async function doSearch() {
         document.getElementById('resultHeader').style.display = 'flex';
         document.getElementById('tableWrap').style.display = 'block';
 
-        // Show error if any platform failed
+        // Show error details for failed platforms
         if (data.errors) {
-            const errs = Object.entries(data.errors).map(([k,v]) => `${k}: ${v}`).join(', ');
+            const errs = Object.entries(data.errors).map(([k,v]) => `${platformNames[k] || k}: ${v}`).join('\n');
             if (currentVideos.length === 0) {
-                showError('所有平台搜索失败: ' + errs);
+                showError('所有平台搜索失败:\n' + errs);
+            } else {
+                showToast('⚠️ 部分平台搜索失败，详见平台统计');
             }
         }
 
@@ -701,9 +691,10 @@ function renderTable(videos) {
     tbody.innerHTML = '';
 
     videos.forEach((v, i) => {
-        const badgeMap = {youtube:'badge-yt',tiktok:'badge-tt',douyin:'badge-dy',xiaohongshu:'badge-xhs',bilibili:'badge-bili',wechat:'badge-wx'};
-        const nameMap = {youtube:'YouTube',tiktok:'TikTok',douyin:'抖音',xiaohongshu:'小红书',bilibili:'B站',wechat:'视频号'};
-        const badgeClass = badgeMap[v.platform] || 'badge-tt';
+        const badgeMap = {douyin:'badge-dy',xiaohongshu:'badge-xhs',bilibili:'badge-bili',wechat:'badge-wx'};
+        const nameMap = {douyin:'抖音',xiaohongshu:'小红书',bilibili:'B站',wechat:'视频号'};
+        const iconMap = {douyin:'🎵',xiaohongshu:'📕',bilibili:'📺',wechat:'💚'};
+        const badgeClass = badgeMap[v.platform] || 'badge-dy';
         const badgeText = nameMap[v.platform] || v.platform;
 
         const tr = document.createElement('tr');
@@ -712,13 +703,13 @@ function renderTable(videos) {
             <td><span class="platform-badge ${badgeClass}">${badgeText}</span></td>
             <td>
                 <div class="thumb-wrap">
-                    <a href="${v.url}" target="_blank">
-                        <img class="thumb" src="${v.thumbnail}" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\'width:160px;height:90px;background:#f1f3f4;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;border-radius:6px;\'>无图片</div>'">
+                    <a href="${v.url || '#'}" target="_blank">
+                        <img class="thumb" src="${v.thumbnail}" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:160px;height:90px;background:#f1f3f4;display:flex;align-items:center;justify-content:center;color:#999;font-size:24px;border-radius:6px;\\'>${iconMap[v.platform] || '📹'}</div>'">
                     </a>
                 </div>
             </td>
             <td>
-                <a class="video-title" href="${v.url}" target="_blank">${escapeHtml(v.title)}</a>
+                <a class="video-title" href="${v.url || '#'}" target="_blank">${escapeHtml(v.title)}</a>
                 <div style="margin-top:4px;">
                     <span style="font-size:11px;color:#5f6368;">${escapeHtml((v.description || '').substring(0, 60))}${v.description && v.description.length > 60 ? '...' : ''}</span>
                 </div>
@@ -728,7 +719,7 @@ function renderTable(videos) {
                     ${v.channelAvatar ? `<img class="channel-avatar" src="${v.channelAvatar}" onerror="this.style.display='none'">` : ''}
                     <div>
                         <div class="channel-name">${escapeHtml(v.channelTitle)}</div>
-                        ${v.subscriberCount !== 'N/A' ? `<div class="channel-subs">${formatNum(v.subscriberCount)} 订阅</div>` : ''}
+                        ${v.subscriberCount && v.subscriberCount !== 'N/A' ? `<div class="channel-subs">${formatNum(v.subscriberCount)} 粉丝</div>` : ''}
                     </div>
                 </div>
             </td>
@@ -788,7 +779,16 @@ async function exportExcel() {
 }
 
 // ==================== AI Analysis ====================
+let pendingAnalyze = false;  // flag: after saving settings, should we auto-analyze?
+
 function openLLMConfig() {
+    if (llmConfig.apiKey) {
+        // Key already configured, directly analyze
+        analyzeTopics();
+        return;
+    }
+    // No key yet, open settings and flag for auto-analyze
+    pendingAnalyze = true;
     openSettings();
 }
 
@@ -812,6 +812,24 @@ async function saveLLMConfigAndAnalyze() {
     updateSettingsDot();
     closeSettings();
     await analyzeTopics();
+}
+
+function saveAndAnalyze() {
+    pendingAnalyze = true;
+    saveSettings();
+}
+
+function setLLMPreset(preset) {
+    const presets = {
+        'deepseek': { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+        'qwen': { baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+        'openai': { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    };
+    const p = presets[preset];
+    if (p) {
+        document.getElementById('llmBaseUrl').value = p.baseUrl;
+        document.getElementById('llmModel').value = p.model;
+    }
 }
 
 async function analyzeTopics() {
@@ -864,6 +882,8 @@ function renderTopics(topics) {
     const grid = document.getElementById('topicGrid');
     grid.innerHTML = '';
 
+    const platformIcons = { '抖音': '🎵', '小红书': '📕', 'B站': '📺', '视频号': '💚', '多平台': '🔥' };
+
     topics.forEach((topic, i) => {
         const heatClass = topic.heat_level === '高' ? 'heat-high' : topic.heat_level === '中' ? 'heat-mid' : 'heat-low';
         const framework = topic.content_framework || {};
@@ -878,7 +898,7 @@ function renderTopics(topics) {
                 <div class="topic-name">${escapeHtml(topic.topic_name)}</div>
                 <div class="topic-meta">
                     <span class="topic-badge ${heatClass}">🔥 ${topic.heat_level}热度</span>
-                    <span class="topic-badge" style="background:#e8f0fe;color:#1a73e8;">${topic.best_platform}</span>
+                    <span class="topic-badge" style="background:#e8f0fe;color:#1a73e8;">${platformIcons[topic.best_platform] || '🔥'} ${topic.best_platform}</span>
                 </div>
             </div>
             <div class="topic-body">
@@ -921,8 +941,8 @@ function renderTopics(topics) {
                 <div style="font-size:12px;font-weight:600;color:#5f6368;margin-bottom:8px;">关联视频</div>
                 ${examples.slice(0, 3).map(ex => `
                     <div class="topic-video-item">
-                        <span>${ex.platform === 'YouTube' ? '🔴' : '⚫'}</span>
-                        <a href="${ex.url}" target="_blank">${escapeHtml(ex.title || '视频链接')}</a>
+                        <span>${platformIcons[ex.platform] || '📹'}</span>
+                        <a href="${ex.url || '#'}" target="_blank">${escapeHtml(ex.title || '视频链接')}</a>
                         <span>(${ex.views || 'N/A'})</span>
                     </div>
                 `).join('')}
@@ -953,7 +973,7 @@ async function exportTopicsExcel() {
 }
 
 function copyText(text) {
-    navigator.clipboard.writeText(text).then(() => showError('✅ 已复制: ' + text));
+    navigator.clipboard.writeText(text).then(() => showToast('✅ 已复制: ' + text));
 }
 
 // ==================== Utils ====================
@@ -976,6 +996,17 @@ function showError(msg) {
     toast.textContent = msg;
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function showToast(msg) {
+    const toast = document.getElementById('errorToast');
+    toast.textContent = msg;
+    toast.style.background = '#1e8e3e';
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.style.background = '';
+    }, 2000);
 }
 </script>
 
