@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: topic-search-tool
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: USE_PROXY
+        value: "false"
+      - key: YT_API_KEY
+        sync: false
+      - key: TIKTOK_API_KEY
+        sync: false
+      - key: TIKHUB_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11.0"

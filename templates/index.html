@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内容营销选题工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1a73e8;
+            --primary-light: #e8f0fe;
+            --danger: #d93025;
+            --success: #1e8e3e;
+            --warning: #f9ab00;
+            --text: #202124;
+            --text-secondary: #5f6368;
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --border: #dadce0;
+            --shadow: 0 1px 3px rgba(60,64,67,0.12), 0 1px 2px rgba(60,64,67,0.08);
+            --shadow-lg: 0 4px 12px rgba(60,64,67,0.15), 0 2px 6px rgba(60,64,67,0.1);
+            --youtube: #ff0000;
+            --tiktok: #000000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .logo-icon { width: 36px; height: 36px; background: #ff0000; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; }
+        .logo-text { font-size: 18px; font-weight: 600; color: var(--text); }
+        .logo-sub { font-size: 12px; color: var(--text-secondary); }
+        .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+        .btn-settings { padding: 8px 14px; background: white; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-secondary); transition: all 0.2s; }
+        .btn-settings:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+        .btn-settings .dot-ok { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+        .btn-settings .dot-no { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+        .search-box { flex: 1; max-width: 600px; display: flex; gap: 8px; }
+        .search-input-wrap { flex: 1; position: relative; }
+        .search-input { width: 100%; padding: 10px 16px 10px 40px; border: 2px solid var(--border); border-radius: 8px; font-size: 15px; outline: none; transition: border-color 0.2s; }
+        .search-input:focus { border-color: var(--primary); }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 16px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #1557b0; }
+        .btn-primary:disabled { background: #93b8e8; cursor: not-allowed; }
+        .btn-outline { background: white; color: var(--primary); border: 1px solid var(--border); }
+        .btn-outline:hover { background: var(--primary-light); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #137333; }
+        .btn-success:disabled { background: #8fce9f; cursor: not-allowed; }
+        .btn-warning { background: var(--warning); color: #202124; }
+        .btn-warning:hover { background: #e09b00; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-icon { padding: 8px 10px; }
+
+        /* Platform selector */
+        .platform-bar {
+            max-width: 1400px;
+            margin: 12px auto 0;
+            padding: 0 24px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .platform-label { font-size: 13px; color: var(--text-secondary); }
+        .platform-chip {
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            background: white;
+            transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .platform-chip:hover { border-color: var(--primary); }
+        .platform-chip.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .platform-chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot-yt { background: var(--youtube); }
+        .dot-tt { background: var(--tiktok); }
+
+        /* Options */
+        .options-bar {
+            max-width: 1400px;
+            margin: 12px auto 0;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .option-group { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+        .option-group select, .option-group input {
+            padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none;
+        }
+        .option-group select:focus, .option-group input:focus { border-color: var(--primary); }
+
+        /* Quick keywords */
+        .quick-keywords {
+            max-width: 1400px; margin: 12px auto 0; padding: 0 24px;
+            display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .quick-kw { padding: 5px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
+        .quick-kw:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+        /* Tabs */
+        .tabs-wrap {
+            max-width: 1400px; margin: 16px auto 0; padding: 0 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tabs { display: flex; gap: 4px; }
+        .tab {
+            padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--text-secondary);
+            cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s;
+            background: none; border-left: none; border-right: none; border-top: none;
+        }
+        .tab:hover { color: var(--primary); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* Container */
+        .container { max-width: 1400px; margin: 16px auto; padding: 0 24px 40px; }
+
+        /* Loading */
+        .loading { display: none; text-align: center; padding: 60px 20px; }
+        .loading.show { display: block; }
+        .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Empty */
+        .empty { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+        /* Result header */
+        .result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .result-count { font-size: 14px; color: var(--text-secondary); }
+        .result-count strong { color: var(--primary); }
+        .result-actions { display: flex; gap: 8px; }
+
+        /* Table */
+        .table-wrap { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #f1f3f4; }
+        th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); white-space: nowrap; }
+        td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #f1f3f4; vertical-align: top; }
+        tr:hover td { background: #f8faff; }
+
+        .platform-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+        }
+        .badge-yt { background: #ffe6e6; color: #cc0000; }
+        .badge-tt { background: #e8e8e8; color: #333; }
+        .badge-dy { background: #ffe6ec; color: #fe2c55; }
+        .badge-xhs { background: #ffe6ea; color: #ff2442; }
+        .badge-bili { background: #e6f7fc; color: #00a1d6; }
+        .badge-wx { background: #e6f9ed; color: #07c160; }
+        .video-title { font-weight: 500; color: var(--text); text-decoration: none; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .video-title:hover { color: var(--primary); }
+        .channel-cell { display: flex; align-items: center; gap: 8px; }
+        .channel-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .channel-name { font-weight: 500; color: var(--text); }
+        .channel-subs { font-size: 11px; color: var(--text-secondary); }
+        .stat { font-variant-numeric: tabular-nums; }
+        .stat-primary { font-weight: 600; color: var(--text); }
+        .stat-secondary { font-size: 12px; color: var(--text-secondary); }
+        .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+        .tag { padding: 2px 8px; background: var(--primary-light); color: var(--primary); border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .thumb-wrap { width: 160px; flex-shrink: 0; }
+        .thumb { width: 160px; height: 90px; border-radius: 6px; object-fit: cover; }
+
+        /* AI Config Panel */
+        .ai-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px; padding: 20px 24px; margin-bottom: 20px;
+            color: white; display: none;
+        }
+        .ai-panel.show { display: block; }
+        .ai-panel-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+        .ai-panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .ai-input { padding: 8px 12px; border: none; border-radius: 6px; font-size: 13px; width: 100%; }
+        .ai-input::placeholder { color: #999; }
+        .ai-hint { font-size: 12px; opacity: 0.85; margin-top: 8px; }
+
+        /* Topic Cards */
+        .topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+        .topic-card {
+            background: var(--card); border-radius: 12px; box-shadow: var(--shadow);
+            overflow: hidden; transition: all 0.2s; border: 1px solid var(--border);
+        }
+        .topic-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+        .topic-header {
+            padding: 16px 20px; background: linear-gradient(135deg, var(--primary-light) 0%, #fff 100%);
+            border-bottom: 1px solid var(--border);
+        }
+        .topic-name { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.4; }
+        .topic-meta { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+        .topic-badge {
+            padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+        }
+        .heat-high { background: #fce8e6; color: #c5221f; }
+        .heat-mid { background: #fef7e0; color: #b06000; }
+        .heat-low { background: #e8f5e9; color: #1e8e3e; }
+        .topic-body { padding: 16px 20px; }
+        .topic-section { margin-bottom: 14px; }
+        .topic-section-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .topic-section-content { font-size: 13px; color: var(--text); line-height: 1.6; }
+        .rewrite-list { display: flex; flex-direction: column; gap: 6px; }
+        .rewrite-item {
+            padding: 8px 12px; background: #f8f9fa; border-radius: 6px;
+            font-size: 13px; color: var(--text); cursor: pointer;
+            border-left: 3px solid var(--primary); transition: all 0.2s;
+        }
+        .rewrite-item:hover { background: var(--primary-light); }
+        .framework-box {
+            background: #f8f9fa; border-radius: 8px; padding: 12px;
+            display: grid; grid-template-columns: 1fr; gap: 8px;
+        }
+        .framework-item { font-size: 13px; }
+        .framework-label { font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 2px; }
+        .framework-text { color: var(--text); }
+        .insights-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .insight-tag { padding: 3px 10px; background: #e8f0fe; color: var(--primary); border-radius: 12px; font-size: 12px; }
+        .topic-videos { padding: 12px 20px; background: #f8f9fa; border-top: 1px solid var(--border); }
+        .topic-video-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+        .topic-video-item a { color: var(--primary); text-decoration: none; }
+        .topic-video-item a:hover { text-decoration: underline; }
+
+        /* Error toast */
+        .error-toast {
+            position: fixed; top: 80px; left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--danger); color: white;
+            padding: 12px 24px; border-radius: 8px; font-size: 14px;
+            box-shadow: var(--shadow-lg); opacity: 0; transition: all 0.3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .error-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* LLM Config Modal */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: white; border-radius: 12px; padding: 24px;
+            width: 90%; max-width: 520px; box-shadow: var(--shadow-lg);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+        .modal-field { margin-bottom: 14px; }
+        .modal-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block; }
+        .modal-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; }
+        .modal-input:focus { border-color: var(--primary); }
+        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+        .modal-hint { font-size: 11px; color: #5f6368; margin-top: 4px; }
+        .modal-hint a { color: var(--primary); text-decoration: none; }
+        .modal-hint a:hover { text-decoration: underline; }
+        .modal-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+        .modal-section-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .key-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; margin-left: 6px; }
+        .key-ok { background: #e8f5e9; color: #1e8e3e; }
+        .key-no { background: #fce8e6; color: #c5221f; }
+
+        @media (max-width: 768px) {
+            .header-inner { flex-wrap: wrap; }
+            .search-box { max-width: 100%; order: 3; width: 100%; }
+            .thumb-wrap { width: 120px; }
+            .thumb { width: 120px; height: 68px; }
+            td, th { padding: 8px; font-size: 12px; }
+            .topic-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-inner">
+        <div class="logo">
+            <div class="logo-icon">▶</div>
+            <div>
+                <div class="logo-text">内容营销选题工具</div>
+                <div class="logo-sub">热点搜集 · AI分析 · 选题生成</div>
+            </div>
+        </div>
+        <div class="search-box">
+            <div class="search-input-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" id="searchInput" placeholder="输入关键词搜索热点视频..." autocomplete="off">
+            </div>
+            <button class="btn btn-primary" id="searchBtn" onclick="doSearch()">搜索</button>
+        </div>
+        <div class="header-right">
+            <button class="btn-settings" onclick="openSettings()" id="settingsBtn">
+                ⚙️ 设置 <span class="dot-no" id="settingsDot"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="platform-bar">
+    <span class="platform-label">🌍 国外平台：</span>
+    <span class="platform-chip" data-platform="youtube" onclick="togglePlatform(this)">
+        <span class="dot" style="background:#ff0000;"></span> YouTube
+    </span>
+    <span class="platform-chip" data-platform="tiktok" onclick="togglePlatform(this)">
+        <span class="dot" style="background:#000;"></span> TikTok
+    </span>
+    <span style="margin:0 8px;color:#dadce0;">|</span>
+    <span class="platform-label">🇨🇳 国内平台：</span>
+    <span class="platform-chip" data-platform="douyin" onclick="togglePlatform(this)">
+        <span class="dot" style="background:#fe2c55;"></span> 抖音
+    </span>
+    <span class="platform-chip" data-platform="xiaohongshu" onclick="togglePlatform(this)">
+        <span class="dot" style="background:#ff2442;"></span> 小红书
+    </span>
+    <span class="platform-chip" data-platform="bilibili" onclick="togglePlatform(this)">
+        <span class="dot" style="background:#00a1d6;"></span> B站
+    </span>
+    <span class="platform-chip" data-platform="wechat" onclick="togglePlatform(this)">
+        <span class="dot" style="background:#07c160;"></span> 视频号
+    </span>
+    <span style="margin:0 8px;color:#dadce0;">|</span>
+    <span class="platform-chip active" data-platform="youtube,tiktok,douyin,xiaohongshu,bilibili,wechat" onclick="togglePlatform(this)">
+        ⚡ 全平台
+    </span>
+</div>
+
+<div class="options-bar">
+    <div class="option-group">
+        <label>排序</label>
+        <select id="orderSelect">
+            <option value="relevance">相关性</option>
+            <option value="date">最新发布</option>
+            <option value="viewCount">播放量</option>
+            <option value="rating">评分</option>
+        </select>
+    </div>
+    <div class="option-group">
+        <label>数量</label>
+        <select id="maxSelect">
+            <option value="5">5条</option>
+            <option value="10" selected>10条</option>
+            <option value="20">20条</option>
+            <option value="50">50条</option>
+        </select>
+    </div>
+    <div class="option-group">
+        <label>地区</label>
+        <select id="regionSelect">
+            <option value="">全部</option>
+            <option value="TW">中国台湾</option>
+            <option value="HK">中国香港</option>
+            <option value="US">美国</option>
+            <option value="SG">新加坡</option>
+            <option value="MY">马来西亚</option>
+        </select>
+    </div>
+</div>
+
+<div class="quick-keywords" id="quickKeywords">
+    <span class="quick-kw" onclick="quickSearch('跨境电商')">跨境电商</span>
+    <span class="quick-kw" onclick="quickSearch('Amazon选品')">Amazon选品</span>
+    <span class="quick-kw" onclick="quickSearch('TikTok运营')">TikTok运营</span>
+    <span class="quick-kw" onclick="quickSearch('Shopify建站')">Shopify建站</span>
+    <span class="quick-kw" onclick="quickSearch('独立站引流')">独立站引流</span>
+    <span class="quick-kw" onclick="quickSearch('跨境物流')">跨境物流</span>
+    <span class="quick-kw" onclick="quickSearch('海外社媒营销')">海外社媒营销</span>
+    <span class="quick-kw" onclick="quickSearch('dropshipping')">dropshipping</span>
+</div>
+
+<div class="tabs-wrap">
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('data')" id="tab-data">📊 原始数据</button>
+        <button class="tab" onclick="switchTab('topics')" id="tab-topics">💡 选题库 <span id="topicCount"></span></button>
+    </div>
+</div>
+
+<div class="container">
+    <div id="emptyState" class="empty">
+        <div class="empty-icon">🎬</div>
+        <div>输入关键词开始搜索热点视频</div>
+        <div style="font-size:13px;margin-top:8px;">支持 YouTube / TikTok / 抖音 / 小红书 / B站 / 视频号 六平台数据采集</div>
+    </div>
+
+    <div id="loadingState" class="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">正在搜索中...</div>
+    </div>
+
+    <!-- Raw Data Tab -->
+    <div id="dataPanel">
+        <div class="result-header" id="resultHeader" style="display:none;">
+            <div class="result-count">
+                "<span id="searchKeyword"></span>" 共 <strong id="totalCount">0</strong> 条
+                <span id="platformBreakdown" style="margin-left:12px;font-size:12px;"></span>
+            </div>
+            <div class="result-actions">
+                <button class="btn btn-outline btn-sm" onclick="toggleSelectAll()">全选</button>
+                <button class="btn btn-success btn-sm" id="exportBtn" onclick="exportExcel()" disabled>📥 导出视频</button>
+                <button class="btn btn-warning btn-sm" id="analyzeBtn" onclick="openLLMConfig()">🤖 AI 生成选题库</button>
+            </div>
+        </div>
+        <div class="table-wrap" id="tableWrap" style="display:none;">
+            <table>
+                <thead>
+                    <tr>
+                            <th style="width:36px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                        <th style="width:80px;">平台</th>
+                        <th style="width:160px;">封面</th>
+                        <th style="min-width:220px;">标题</th>
+                        <th style="min-width:140px;">频道</th>
+                        <th>播放量</th>
+                        <th>点赞</th>
+                        <th>评论</th>
+                        <th>分享</th>
+                        <th>发布日期</th>
+                        <th>时长</th>
+                        <th style="min-width:120px;">标签</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Topics Tab -->
+    <div id="topicsPanel" style="display:none;">
+        <div id="topicsEmpty" class="empty">
+            <div class="empty-icon">💡</div>
+            <div>还没有生成选题库</div>
+            <div style="font-size:13px;margin-top:8px;">在「原始数据」页面搜索视频后，点击「AI 生成选题库」</div>
+        </div>
+        <div id="topicsLoading" class="loading">
+            <div class="spinner"></div>
+            <div>AI 正在分析内容，生成选题库...</div>
+            <div style="font-size:13px;color:#999;margin-top:8px;">这可能需要 10-30 秒</div>
+        </div>
+        <div id="topicsContent">
+            <div class="result-header" id="topicsHeader" style="display:none;">
+                <div class="result-count">
+                    "<span id="topicKeyword"></span>" 生成 <strong id="topicTotal">0</strong> 个选题
+                </div>
+                <div class="result-actions">
+                    <button class="btn btn-success btn-sm" onclick="exportTopicsExcel()">📥 导出选题库</button>
+                </div>
+            </div>
+            <div class="topic-grid" id="topicGrid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="llmModal">
+    <div class="modal">
+        <div class="modal-title">⚙️ 设置</div>
+
+        <!-- API Keys Section -->
+        <div class="modal-section-title">🔑 API 密钥</div>
+
+        <div class="modal-field">
+            <label class="modal-label">YouTube API Key <span class="key-status key-ok" id="ytKeyStatus">服务端已配置</span></label>
+            <input type="text" class="modal-input" id="ytApiKey" placeholder="AIzaSy..." disabled>
+            <div class="modal-hint">YouTube Data API v3 · 已在服务端配置 · <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google 控制台</a></div>
+        </div>
+
+        <div class="modal-field">
+            <label class="modal-label">TikTok API Key (SocialCrawl) <span class="key-status key-ok" id="ttKeyStatus">服务端已配置</span></label>
+            <input type="text" class="modal-input" id="ttApiKey" placeholder="sc_..." disabled>
+            <div class="modal-hint">SocialCrawl API · 已在服务端配置 · <a href="https://www.socialcrawl.dev" target="_blank">注册获取</a></div>
+        </div>
+
+        <div class="modal-field">
+            <label class="modal-label">TikHub API Key（国内4平台）<span class="key-status" id="tikhubKeyStatus">未配置</span></label>
+            <input type="text" class="modal-input" id="tikhubKey" placeholder="TikHub Bearer Token...">
+            <div class="modal-hint">抖音 / 小红书 / B站 / 视频号 需要 · <a href="https://tikhub.io" target="_blank">注册获取</a> · 国内用 api.tikhub.dev 免翻墙</div>
+        </div>
+
+        <hr class="modal-divider">
+
+        <!-- LLM Config Section -->
+        <div class="modal-section-title">🤖 AI 分析 (LLM)</div>
+
+        <div class="modal-field">
+            <label class="modal-label">LLM API Key *</label>
+            <input type="password" class="modal-input" id="llmApiKey" placeholder="sk-...">
+        </div>
+        <div class="modal-field">
+            <label class="modal-label">模型</label>
+            <input type="text" class="modal-input" id="llmModel" value="gpt-4o-mini" placeholder="gpt-4o-mini">
+        </div>
+        <div class="modal-field">
+            <label class="modal-label">API 地址</label>
+            <input type="text" class="modal-input" id="llmBaseUrl" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1">
+            <div class="modal-hint">支持 OpenAI、DeepSeek、Qwen 等兼容 OpenAI 格式的 API</div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeSettings()">取消</button>
+            <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
+        </div>
+    </div>
+</div>
+
+<div class="error-toast" id="errorToast"></div>
+
+<script>
+let currentVideos = [];
+let currentTopics = [];
+let currentKeyword = '';
+let selectedPlatforms = 'youtube,tiktok,douyin,xiaohongshu,bilibili,wechat';
+let sortField = '';
+let sortAsc = true;
+let llmConfig = JSON.parse(localStorage.getItem('llmConfig') || '{}');
+
+// Init
+document.getElementById('searchInput').addEventListener('keypress', e => { if (e.key === 'Enter') doSearch(); });
+updateSettingsDot();
+
+function updateSettingsDot() {
+    const dot = document.getElementById('settingsDot');
+    const tikhubKey = localStorage.getItem('tikhubKey') || '';
+    const llmConfig = JSON.parse(localStorage.getItem('llmConfig') || '{}');
+    const hasTikhub = !!tikhubKey;
+    const hasLlm = !!llmConfig.apiKey;
+    dot.className = (hasTikhub && hasLlm) ? 'dot-ok' : 'dot-no';
+}
+
+function openSettings() {
+    const llmConfig = JSON.parse(localStorage.getItem('llmConfig') || '{}');
+    if (llmConfig.apiKey) document.getElementById('llmApiKey').value = llmConfig.apiKey;
+    if (llmConfig.model) document.getElementById('llmModel').value = llmConfig.model;
+    if (llmConfig.baseUrl) document.getElementById('llmBaseUrl').value = llmConfig.baseUrl;
+    const savedTikhubKey = localStorage.getItem('tikhubKey') || '';
+    document.getElementById('tikhubKey').value = savedTikhubKey;
+    updateKeyStatus();
+    document.getElementById('llmModal').classList.add('show');
+}
+
+function closeSettings() {
+    document.getElementById('llmModal').classList.remove('show');
+}
+
+function saveSettings() {
+    const apiKey = document.getElementById('llmApiKey').value.trim();
+    const model = document.getElementById('llmModel').value.trim() || 'gpt-4o-mini';
+    const baseUrl = document.getElementById('llmBaseUrl').value.trim() || 'https://api.openai.com/v1';
+    const tikhubKey = document.getElementById('tikhubKey').value.trim();
+
+    const llmConfig = { apiKey, model, baseUrl };
+    localStorage.setItem('llmConfig', JSON.stringify(llmConfig));
+    if (tikhubKey) localStorage.setItem('tikhubKey', tikhubKey);
+    else localStorage.removeItem('tikhubKey');
+
+    updateSettingsDot();
+    closeSettings();
+    showError('✅ 设置已保存');
+}
+
+function updateKeyStatus() {
+    const tikhubKey = localStorage.getItem('tikhubKey') || '';
+    const statusEl = document.getElementById('tikhubKeyStatus');
+    if (tikhubKey) {
+        statusEl.textContent = '已配置';
+        statusEl.className = 'key-status key-ok';
+    } else {
+        statusEl.textContent = '未配置';
+        statusEl.className = 'key-status key-no';
+    }
+}
+
+function togglePlatform(el) {
+    document.querySelectorAll('.platform-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    selectedPlatforms = el.dataset.platform;
+}
+
+function quickSearch(kw) {
+    document.getElementById('searchInput').value = kw;
+    doSearch();
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('dataPanel').style.display = tab === 'data' ? 'block' : 'none';
+    document.getElementById('topicsPanel').style.display = tab === 'topics' ? 'block' : 'none';
+}
+
+async function doSearch() {
+    const keyword = document.getElementById('searchInput').value.trim();
+    if (!keyword) return;
+
+    currentKeyword = keyword;
+    const order = document.getElementById('orderSelect').value;
+    const maxResults = document.getElementById('maxSelect').value;
+    const region = document.getElementById('regionSelect').value;
+
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('dataPanel').style.display = 'block';
+    document.getElementById('resultHeader').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('loadingState').classList.add('show');
+
+    const platformLabels = {
+        'youtube': 'YouTube', 'tiktok': 'TikTok', 'douyin': '抖音',
+        'xiaohongshu': '小红书', 'bilibili': 'B站', 'wechat': '视频号',
+        'youtube,tiktok': 'YouTube + TikTok',
+        'youtube,tiktok,douyin,xiaohongshu,bilibili,wechat': '全平台'
+    };
+    document.getElementById('loadingText').textContent = `正在搜索 ${platformLabels[selectedPlatforms] || selectedPlatforms}...`;
+
+    try {
+        const params = new URLSearchParams({ q: keyword, max: maxResults, order, platforms: selectedPlatforms });
+        if (region) params.set('region', region);
+        // Pass TikHub key if configured
+        const tikhubKey = localStorage.getItem('tikhubKey') || '';
+        if (tikhubKey) params.set('tikhub_key', tikhubKey);
+
+        const resp = await fetch(`/api/search?${params}`);
+        const data = await resp.json();
+
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
+
+        currentVideos = data.videos || [];
+        currentTopics = []; // Reset topics on new search
+
+        // Platform breakdown
+        const platformNames = {youtube:'YouTube',tiktok:'TikTok',douyin:'抖音',xiaohongshu:'小红书',bilibili:'B站',wechat:'视频号'};
+        const platformColors = {youtube:'#cc0000',tiktok:'#333',douyin:'#fe2c55',xiaohongshu:'#ff2442',bilibili:'#00a1d6',wechat:'#07c160'};
+        let breakdown = '';
+        const platformCounts = {};
+        currentVideos.forEach(v => { platformCounts[v.platform] = (platformCounts[v.platform] || 0) + 1; });
+        Object.entries(platformCounts).forEach(([p, c]) => {
+            if (breakdown) breakdown += ' · ';
+            breakdown += `<span style="color:${platformColors[p] || '#333'};">${platformNames[p] || p} ${c}</span>`;
+        });
+        if (data.errors) {
+            Object.keys(data.errors).forEach(p => {
+                breakdown += ` <span style="color:#d93025;">(${platformNames[p] || p} 获取失败)</span>`;
+            });
+        }
+        document.getElementById('platformBreakdown').innerHTML = breakdown;
+
+        document.getElementById('searchKeyword').textContent = keyword;
+        document.getElementById('totalCount').textContent = currentVideos.length;
+        renderTable(currentVideos);
+
+        document.getElementById('resultHeader').style.display = 'flex';
+        document.getElementById('tableWrap').style.display = 'block';
+
+        // Show error if any platform failed
+        if (data.errors) {
+            const errs = Object.entries(data.errors).map(([k,v]) => `${k}: ${v}`).join(', ');
+            if (currentVideos.length === 0) {
+                showError('所有平台搜索失败: ' + errs);
+            }
+        }
+
+    } catch (e) {
+        showError('搜索失败: ' + e.message);
+    } finally {
+        document.getElementById('loadingState').classList.remove('show');
+        document.getElementById('searchBtn').disabled = false;
+    }
+}
+
+function renderTable(videos) {
+    const tbody = document.getElementById('resultBody');
+    tbody.innerHTML = '';
+
+    videos.forEach((v, i) => {
+        const badgeMap = {youtube:'badge-yt',tiktok:'badge-tt',douyin:'badge-dy',xiaohongshu:'badge-xhs',bilibili:'badge-bili',wechat:'badge-wx'};
+        const nameMap = {youtube:'YouTube',tiktok:'TikTok',douyin:'抖音',xiaohongshu:'小红书',bilibili:'B站',wechat:'视频号'};
+        const badgeClass = badgeMap[v.platform] || 'badge-tt';
+        const badgeText = nameMap[v.platform] || v.platform;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="checkbox" class="video-check" data-index="${i}" checked></td>
+            <td><span class="platform-badge ${badgeClass}">${badgeText}</span></td>
+            <td>
+                <div class="thumb-wrap">
+                    <a href="${v.url}" target="_blank">
+                        <img class="thumb" src="${v.thumbnail}" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\'width:160px;height:90px;background:#f1f3f4;display:flex;align-items:center;justify-content:center;color:#999;font-size:13px;border-radius:6px;\'>无图片</div>'">
+                    </a>
+                </div>
+            </td>
+            <td>
+                <a class="video-title" href="${v.url}" target="_blank">${escapeHtml(v.title)}</a>
+                <div style="margin-top:4px;">
+                    <span style="font-size:11px;color:#5f6368;">${escapeHtml((v.description || '').substring(0, 60))}${v.description && v.description.length > 60 ? '...' : ''}</span>
+                </div>
+            </td>
+            <td>
+                <div class="channel-cell">
+                    ${v.channelAvatar ? `<img class="channel-avatar" src="${v.channelAvatar}" onerror="this.style.display='none'">` : ''}
+                    <div>
+                        <div class="channel-name">${escapeHtml(v.channelTitle)}</div>
+                        ${v.subscriberCount !== 'N/A' ? `<div class="channel-subs">${formatNum(v.subscriberCount)} 订阅</div>` : ''}
+                    </div>
+                </div>
+            </td>
+            <td class="stat stat-primary">${v.viewCountFormatted}</td>
+            <td class="stat">${v.likeCountFormatted}</td>
+            <td class="stat">${v.commentCountFormatted}</td>
+            <td class="stat">${v.shareCountFormatted || 'N/A'}</td>
+            <td class="stat-secondary">${v.publishedAtFormatted}</td>
+            <td>${v.durationFormatted}</td>
+            <td>
+                <div class="tags">
+                    ${(v.tags || []).slice(0, 3).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}
+                    ${v.tags && v.tags.length > 3 ? `<span class="tag">+${v.tags.length - 3}</span>` : ''}
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('exportBtn').disabled = false;
+    document.getElementById('analyzeBtn').disabled = currentVideos.length === 0;
+}
+
+function toggleSelectAll() {
+    const checkAll = document.getElementById('selectAll');
+    const checks = document.querySelectorAll('.video-check');
+    const newState = !checkAll.checked;
+    checks.forEach(c => c.checked = newState);
+    checkAll.checked = newState;
+}
+
+async function exportExcel() {
+    const checks = document.querySelectorAll('.video-check:checked');
+    if (checks.length === 0) { showError('请至少选择一条视频'); return; }
+
+    const selected = [];
+    checks.forEach(c => selected.push(currentVideos[parseInt(c.dataset.index)]));
+
+    try {
+        document.getElementById('exportBtn').disabled = true;
+        const resp = await fetch('/api/export', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videos: selected, keyword: currentKeyword }),
+        });
+        if (!resp.ok) { showError('导出失败'); return; }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `视频搜索_${currentKeyword}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        a.click(); URL.revokeObjectURL(url);
+    } catch (e) {
+        showError('导出失败: ' + e.message);
+    } finally {
+        document.getElementById('exportBtn').disabled = false;
+    }
+}
+
+// ==================== AI Analysis ====================
+function openLLMConfig() {
+    openSettings();
+}
+
+function closeLLMConfig() {
+    closeSettings();
+}
+
+async function saveLLMConfigAndAnalyze() {
+    // Save settings first
+    const apiKey = document.getElementById('llmApiKey').value.trim();
+    const model = document.getElementById('llmModel').value.trim() || 'gpt-4o-mini';
+    const baseUrl = document.getElementById('llmBaseUrl').value.trim() || 'https://api.openai.com/v1';
+    const tikhubKey = document.getElementById('tikhubKey').value.trim();
+
+    if (!apiKey) { showError('请输入 LLM API Key'); return; }
+
+    llmConfig = { apiKey, model, baseUrl };
+    localStorage.setItem('llmConfig', JSON.stringify(llmConfig));
+    if (tikhubKey) localStorage.setItem('tikhubKey', tikhubKey);
+
+    updateSettingsDot();
+    closeSettings();
+    await analyzeTopics();
+}
+
+async function analyzeTopics() {
+    if (!llmConfig.apiKey) { openLLMConfig(); return; }
+    if (currentVideos.length === 0) { showError('请先搜索视频'); return; }
+
+    switchTab('topics');
+    document.getElementById('topicsEmpty').style.display = 'none';
+    document.getElementById('topicsLoading').classList.add('show');
+    document.getElementById('topicsHeader').style.display = 'none';
+    document.getElementById('topicGrid').innerHTML = '';
+
+    try {
+        const resp = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                videos: currentVideos,
+                keyword: currentKeyword,
+                llm_api_key: llmConfig.apiKey,
+                llm_model: llmConfig.model,
+                llm_base_url: llmConfig.baseUrl,
+            }),
+        });
+
+        const data = await resp.json();
+
+        if (data.error) {
+            showError(data.error);
+            switchTab('data');
+            return;
+        }
+
+        currentTopics = data.topics || [];
+        document.getElementById('topicKeyword').textContent = currentKeyword;
+        document.getElementById('topicTotal').textContent = currentTopics.length;
+        document.getElementById('topicCount').textContent = `(${currentTopics.length})`;
+        renderTopics(currentTopics);
+        document.getElementById('topicsHeader').style.display = 'flex';
+
+    } catch (e) {
+        showError('AI 分析失败: ' + e.message);
+        switchTab('data');
+    } finally {
+        document.getElementById('topicsLoading').classList.remove('show');
+    }
+}
+
+function renderTopics(topics) {
+    const grid = document.getElementById('topicGrid');
+    grid.innerHTML = '';
+
+    topics.forEach((topic, i) => {
+        const heatClass = topic.heat_level === '高' ? 'heat-high' : topic.heat_level === '中' ? 'heat-mid' : 'heat-low';
+        const framework = topic.content_framework || {};
+        const titles = topic.rewrite_titles || [];
+        const insights = topic.key_insights || [];
+        const examples = topic.example_videos || [];
+
+        const card = document.createElement('div');
+        card.className = 'topic-card';
+        card.innerHTML = `
+            <div class="topic-header">
+                <div class="topic-name">${escapeHtml(topic.topic_name)}</div>
+                <div class="topic-meta">
+                    <span class="topic-badge ${heatClass}">🔥 ${topic.heat_level}热度</span>
+                    <span class="topic-badge" style="background:#e8f0fe;color:#1a73e8;">${topic.best_platform}</span>
+                </div>
+            </div>
+            <div class="topic-body">
+                <div class="topic-section">
+                    <div class="topic-section-title">话题梗概</div>
+                    <div class="topic-section-content">${escapeHtml(topic.summary)}</div>
+                </div>
+                <div class="topic-section">
+                    <div class="topic-section-title">仿写标题建议</div>
+                    <div class="rewrite-list">
+                        ${titles.map(t => `<div class="rewrite-item" onclick="copyText('${escapeHtml(t).replace(/'/g, "\\'")}')">${escapeHtml(t)}</div>`).join('')}
+                    </div>
+                </div>
+                <div class="topic-section">
+                    <div class="topic-section-title">内容框架</div>
+                    <div class="framework-box">
+                        <div class="framework-item">
+                            <div class="framework-label">🎯 开头钩子</div>
+                            <div class="framework-text">${escapeHtml(framework.hook || '')}</div>
+                        </div>
+                        <div class="framework-item">
+                            <div class="framework-label">📖 内容展开</div>
+                            <div class="framework-text">${escapeHtml(framework.body || '')}</div>
+                        </div>
+                        <div class="framework-item">
+                            <div class="framework-label">📢 结尾引导</div>
+                            <div class="framework-text">${escapeHtml(framework.cta || '')}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="topic-section">
+                    <div class="topic-section-title">关键洞察</div>
+                    <div class="insights-list">
+                        ${insights.map(ins => `<span class="insight-tag">${escapeHtml(ins)}</span>`).join('')}
+                    </div>
+                </div>
+            </div>
+            ${examples.length > 0 ? `
+            <div class="topic-videos">
+                <div style="font-size:12px;font-weight:600;color:#5f6368;margin-bottom:8px;">关联视频</div>
+                ${examples.slice(0, 3).map(ex => `
+                    <div class="topic-video-item">
+                        <span>${ex.platform === 'YouTube' ? '🔴' : '⚫'}</span>
+                        <a href="${ex.url}" target="_blank">${escapeHtml(ex.title || '视频链接')}</a>
+                        <span>(${ex.views || 'N/A'})</span>
+                    </div>
+                `).join('')}
+            </div>` : ''}
+        `;
+        grid.appendChild(card);
+    });
+}
+
+async function exportTopicsExcel() {
+    if (!currentTopics.length) { showError('没有选题数据'); return; }
+
+    try {
+        const resp = await fetch('/api/export_topics', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topics: currentTopics, keyword: currentKeyword }),
+        });
+        if (!resp.ok) { showError('导出失败'); return; }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `选题库_${currentKeyword}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        a.click(); URL.revokeObjectURL(url);
+    } catch (e) {
+        showError('导出失败: ' + e.message);
+    }
+}
+
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => showError('✅ 已复制: ' + text));
+}
+
+// ==================== Utils ====================
+function formatNum(n) {
+    if (!n || n === 'N/A') return 'N/A';
+    const num = parseInt(n);
+    if (num >= 10000) return (num / 10000).toFixed(1) + '万';
+    return num.toLocaleString();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showError(msg) {
+    const toast = document.getElementById('errorToast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+</script>
+
+</body>
+</html>

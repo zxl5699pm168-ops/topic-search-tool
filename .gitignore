@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+*.log
+.ngrok2/
+dist/
+test_*.py
+tiktok_search_raw.json
