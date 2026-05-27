@@ -708,7 +708,7 @@ def search_bilibili(keyword, max_results=10):
                 'duration': str(duration_sec),
                 'durationFormatted': str(duration_str) if duration_str else 'N/A',
                 'description': item.get('description', ''),
-                'thumbnail': item.get('pic', ''),
+                'thumbnail': item.get('pic', '').replace('//', 'https://') if item.get('pic', '').startswith('//') else item.get('pic', ''),
                 'tags': tags[:10],
                 'url': f'https://www.bilibili.com/video/{bvid}' if bvid else f'https://www.bilibili.com/video/av{aid}',
             })
