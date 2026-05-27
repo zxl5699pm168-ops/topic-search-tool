@@ -2,7 +2,7 @@ import os
 import json
 import urllib.request
 import urllib.parse
-import subprocess
+import subprocess  # noqa: F401 - kept for compatibility
 import re
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -12,7 +12,10 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 import tempfile
 
-app = Flask(__name__)
+# Template folder: use absolute path so it works on Vercel/serverless
+_TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+app = Flask(__name__, template_folder=_TEMPLATE_DIR, static_folder=_STATIC_DIR)
 
 # ==================== Config ====================
 API_KEY = os.environ.get('YT_API_KEY', '')
@@ -30,7 +33,7 @@ TIKTOK_API_BASE = 'https://www.socialcrawl.dev/v1/tiktok/search'
 TIKHUB_API_KEY = os.environ.get('TIKHUB_API_KEY', '')
 TIKHUB_API_BASE = 'https://api.tikhub.dev'  # 国内免翻墙域名
 
-YT_DLP_PATH = '/Users/zxl/.workbuddy/binaries/python/envs/default/bin/yt-dlp'
+YT_DLP_PATH = ''  # Not used on cloud deployment
 
 
 # ==================== Proxy Helpers ====================
