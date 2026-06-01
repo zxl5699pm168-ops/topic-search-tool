@@ -21,8 +21,9 @@ app = Flask(__name__, template_folder=_TEMPLATE_DIR, static_folder=_STATIC_DIR)
 API_KEY = os.environ.get('YT_API_KEY', '')
 PROXY_PORT = os.environ.get('YT_PROXY_PORT', '7897')
 PROXY_URL = f'http://127.0.0.1:{PROXY_PORT}'
-# On cloud (Render etc), no proxy needed. Set USE_PROXY=false to disable.
-USE_PROXY = os.environ.get('USE_PROXY', 'true').lower() == 'true'
+# Auto-detect cloud environment (Vercel/Render) and disable proxy
+_IS_CLOUD = os.environ.get('VERCEL') == '1' or os.environ.get('RENDER') == '1'
+USE_PROXY = os.environ.get('USE_PROXY', 'false' if _IS_CLOUD else 'true').lower() == 'true'
 APP_PORT = int(os.environ.get('APP_PORT', os.environ.get('PORT', '5102')))
 
 # TikTok API - SocialCrawl
@@ -51,8 +52,12 @@ def get_opener():
 def api_request(url, timeout=20):
     opener = get_opener()
     req = urllib.request.Request(url)
-    with opener.open(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode())
+    req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode())
+    except Exception as e:
+        raise RuntimeError(f'API请求失败: {url} - {e}')
 
 
 # ==================== Format Helpers ====================
